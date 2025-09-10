@@ -1,0 +1,12 @@
+{
+  "date": 0,
+  "variables": {
+    "cookies": 0,
+    "cps": 1,
+    "cpc": 1,
+    "cps_multiplier": 1,
+    "cpc_multiplier": 1
+  },
+  "buildings": [],
+  "upgrades": []
+}

@@ -1,0 +1,2 @@
+WIDTH = 270
+HEIGHT = 270
