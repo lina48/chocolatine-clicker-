@@ -1,0 +1,180 @@
+# chocolatine_clicker.py
+# chocolatine_clicker_builds.py
+import pygame
+import sys
+import json
+from math import ceil
+import constants.buildtypes as types
+import constants.builds as builds_const
+builds = builds_const.builds
+# ---------- Paramètres ----------
+SAVE_FILE = "chocolatine_builds_save.json"
+WIDTH, HEIGHT = 1000, 600
+FPS = 60  # pour limiter le nombre d'images à diffuser dans l'exécution du jeu
+
+# ---------- état initial du jeu ----------
+state = {
+    "count": 0.0,
+    "per_click": 1.0,
+}
+
+# ---------- formate le nombre pour l'afficher d'une certaine manière (comme 1.2 K, 2 M) ----------
+def format_num(n):
+    if n < 1000: return f"{n:.0f}"
+    if n < 1_000_000: return f"{n/1000:.2f}K"
+    if n < 1_000_000_000: return f"{n/1_000_000:.2f}M"
+    return f"{n/1_000_000_000:.2f}B"
+
+# calcule le nombre de chocolatines par seconde (CPS) en fonction des bâtiments possédés (générées automatiquement)
+# cette fonction parcourt la liste des builds et calcule le CPS total en multipliant le nombre de chaque bâtiment possédé par son boost CPS.
+def total_cps():
+    return sum(b["owned"] * b["boost"] for b in builds)
+
+# sauvegarde l'état du jeu dans un fichier JSON
+# écrit dans un fichier le dictionnaire contenant l'état actuel du jeu (nombre de chocolatines, bâtiments possédés donc state et builds) en utilisant la bibliothèque json.
+def save_game():
+    try:
+        with open(SAVE_FILE, "w") as f:
+            json.dump({"state": state, "builds": builds}, f)
+        print("Game saved.")
+    except Exception as e:
+        print("Save failed:", e)
+
+# charge l'état du jeu à partir d'un fichier JSON
+# lit les données depuis save file et met à jour l'état du jeu (state et builds) avec les valeurs chargées.
+def load_game():
+    try:
+        with open(SAVE_FILE, "r") as f:
+            data = json.load(f)
+        state.update(data.get("state", {}))
+        for i, b in enumerate(data.get("builds", builds)):
+            builds[i].update(b)
+        print("Save loaded.")
+    except FileNotFoundError:
+        print("No save found; starting fresh.")
+    except Exception as e:
+        print("Failed to load save:", e)
+
+def build_cost(build):
+    # le coût d'un build augmente de 15% à chaque achat par rapport au coût initial
+    return round(build["cost"] * (1.15 ** build["owned"]))
+
+# ---------- pygame setup ----------
+pygame.init()
+# Initialisation de Pygame
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Chocolatine Clicker ")
+# time clock pour gérer le framerate pour que le jeu ne tourne pas trop vite
+clock = pygame.time.Clock()
+# les fonctions pour afficher les polices du texte
+font_big = pygame.font.SysFont(None, 48)
+font_med = pygame.font.SysFont(None, 28)
+font_small = pygame.font.SysFont(None, 20)
+
+# Boutons
+# zone cliquable pour la chocolatine sauvegarde et chargement
+choco_rect = pygame.Rect(WIDTH // 2 - 120, HEIGHT // 2 - 120, 240, 240)
+# les boutons de construction de builds sont générés en fonction du nombre de types de bâtiments définis dans la liste builds.
+build_buttons_rects = [pygame.Rect(50, 150 + i * 80, 300, 60) for i in range(len(builds))]
+# boutons de sauvegarde et de chargement
+save_rect = pygame.Rect(WIDTH - 170, HEIGHT - 140, 120, 40)
+load_rect = pygame.Rect(WIDTH - 170, HEIGHT - 80, 120, 40)
+
+# Load save
+load_game()
+
+# Timing
+last_time = pygame.time.get_ticks()
+running = True
+while running:
+
+    dt_ms = clock.tick(FPS)
+    dt = dt_ms / 1000.0
+
+    # Auto CPS
+    state["count"] += total_cps() * dt
+    # ajoute au compteur de chocolatines le nombre généré automatiquement par les bâtiments possédés, en fonction du temps écoulé depuis la dernière mise à jour.
+    # quitte le jeu et sauvegarde l'état actuel du jeu avant de fermer la fenêtre.
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            save_game()
+            running = False
+        # ajoute des chocolatines au compteur lorsqu'on clique sur l'image de la chocolatine ou appuie sur la barre d'espace.
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mx, my = event.pos
+
+            # clic chocolatine
+            if choco_rect.collidepoint(mx, my):
+                state["count"] += state["per_click"]
+
+            # clic builds, parcourt la liste des bâtiments et vérifie si l'utilisateur a cliqué sur l'un des boutons de construction.
+            for i, build in enumerate(builds):
+                rect = build_buttons_rects[i]
+                if rect.collidepoint(mx, my):
+                    cost = build_cost(build)
+                    # si l'utilisateur a suffisamment de chocolatines pour acheter le bâtiment, le nombre de chocolatines est décrémenté du coût du bâtiment et le nombre de bâtiments possédés est incrémenté de 1.
+                    if state["count"] >= cost:
+                        state["count"] -= cost
+                        build["owned"] += 1
+
+            # save et load boutons
+            if save_rect.collidepoint(mx, my):
+                save_game()
+            if load_rect.collidepoint(mx, my):
+                load_game()
+
+        # gère les entrées clavier pour cliquer sur la chocolatine (espace), sauvegarder (S) et charger (L).
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                state["count"] += state["per_click"]
+            elif event.key == pygame.K_s:
+                save_game()
+            elif event.key == pygame.K_l:
+                load_game()
+
+    # mettre à jour l'affichage du jeu
+    screen.fill((250, 240, 230))  # background
+
+    # Chocolatine
+    choco_image = pygame.image.load("assets/img/chocolatine.jpg")
+    choco_image = pygame.transform.scale(choco_image, (choco_rect.width, choco_rect.height))  # Ajuster à la taille de choco_rect
+    # Afficher l'image de la chocolatine
+    screen.blit(choco_image, choco_rect)
+
+    # affichage du nombre de chocolatines, du nombre par clic et du CPS total
+    count_text = font_big.render(f"{format_num(state['count'])} chocolatines", True, (40, 30, 20))
+    screen.blit(count_text, (50, 30))
+
+    # affichage du nombre de chocolatines par clic et du CPS total
+    stats_text = font_med.render(f"Par clic: {state['per_click']:.0f}   CPS (auto): {total_cps():.2f}", True, (40, 30, 20))
+    screen.blit(stats_text, (50, 90))
+
+    # parcourt les boutons de construction et dessine chaque bouton avec les informations sur le bâtiment (nom, coût, boost CPS, nombre possédé).
+    # affiche le nom de la construction, le nombre possédé et le coût, et le boost CPS de chaque bâtiment.
+    for i, build in enumerate(builds):
+        rect = build_buttons_rects[i]
+        pygame.draw.rect(screen, (200, 200, 200), rect, border_radius=8)
+        title = font_med.render(build["name"], True, (50, 10, 10))
+        owned = font_small.render(f"Owned: {build['owned']}", True, (200, 10, 10))
+        cost_text = font_small.render(f"Cost: {format_num(build_cost(build))}", True, (10, 10, 10))
+        boost_text = font_small.render(f"+{build['boost']} CPS", True, (10, 10, 10))
+        screen.blit(title, (rect.x + 10, rect.y + 5))
+        screen.blit(owned, (rect.x + 10, rect.y + 30))
+        screen.blit(cost_text, (rect.x + 120, rect.y + 5))
+        screen.blit(boost_text, (rect.x + 120, rect.y + 30))
+
+    # Save/load boutons
+    pygame.draw.rect(screen, (180, 220, 180), save_rect, border_radius=6)
+    pygame.draw.rect(screen, (180, 200, 220), load_rect, border_radius=6)
+    screen.blit(font_small.render("Sauvegarder(S)", True, (10, 10, 10)), (save_rect.x + 12, save_rect.y + 10))
+    screen.blit(font_small.render("Charger (L)", True, (10, 10, 10)), (load_rect.x + 12, load_rect.y + 10))
+
+    # affiche les instructions pour le joueur en bas de l'écran.
+    hint = font_small.render("Cliquez sur la chocolatine ou appuyez sur ESPACE. Sauvegarder avec S. Charger avec L.", True, (80, 70, 60))
+    screen.blit(hint, (50, HEIGHT - 40))
+    # actualise l'affichage de la fenêtre du jeu pour refléter les changements apportés lors de cette itération de la boucle principale.
+    pygame.display.flip()
+
+pygame.quit()
+sys.exit()
