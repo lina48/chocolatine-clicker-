@@ -7,6 +7,8 @@ from math import ceil
 import constants.buildtypes as types
 import constants.builds as builds_const
 builds = builds_const.builds
+import constants.upgrades as upgrades_const
+upgrades = [dict(u, bought=False) for u in upgrades_const.upgrades]
 # ---------- Paramètres ----------
 SAVE_FILE = "chocolatine_builds_save.json"
 WIDTH, HEIGHT = 1000, 600
@@ -38,8 +40,13 @@ def total_cps():
 # écrit dans un fichier le dictionnaire contenant l'état actuel du jeu (nombre de chocolatines, bâtiments possédés donc state et builds) en utilisant la bibliothèque json.
 def save_game():
     try:
+        # remove surfaces (images) before saving
+        ups = []
+        for u in upgrades:
+            copy = {k: v for k, v in u.items() if k != "surface"}
+            ups.append(copy)
         with open(SAVE_FILE, "w") as f:
-            json.dump({"state": state, "builds": builds}, f)
+            json.dump({"state": state, "builds": builds, "upgrades": ups}, f)
         print("Game saved.")
     except Exception as e:
         print("Save failed:", e)
@@ -53,6 +60,12 @@ def load_game():
         state.update(data.get("state", {}))
         for i, b in enumerate(data.get("builds", builds)):
             builds[i].update(b)
+        # load upgrades state if present
+        ups = data.get("upgrades")
+        if ups:
+            for i, u in enumerate(ups):
+                if i < len(upgrades):
+                    upgrades[i].update(u)
         print("Save loaded.")
     except FileNotFoundError:
         print("No save found; starting fresh.")
@@ -62,7 +75,31 @@ def load_game():
 def build_cost(build):
     # le coût d'un build augmente de 15% à chaque achat par rapport au coût initial
     return round(build["cost"] * (1.15 ** build["owned"]))
-# Les staststiques
+
+# coût d'un upgrade (statique)
+def upgrade_cost(upg):
+    return upg.get("cost", 0)
+
+
+def apply_upgrade(upg):
+    """Applique l'effet d'un upgrade déjà acheté.
+    - si type == 'click' : multiplie le per_click
+    - sinon multiplie le boost des builds dont le type correspond
+    """
+    t = upg.get("type")
+    if not t:
+        return
+    # Les améliorations doivent augmenter le CPS, pas le per-click.
+    # Si type == 'click' on l'interprète comme une amélioration globale du CPS :
+    # on double le boost de TOUS les bâtiments pour augmenter le CPS total.
+    if t == "click":
+        for b in builds:
+            b["boost"] *= 2
+    else:
+        for b in builds:
+            if b.get("type") == t:
+                b["boost"] *= 2
+# Les stastistiques
 def draw_stats(screen, font, state_dict, clicks_total, start_time):
     screen.fill((30, 30, 30))  # fond sombre
     elapsed = (pygame.time.get_ticks() - start_time) / 1000  # en secondes
@@ -112,6 +149,8 @@ font_small = pygame.font.SysFont(None, 20)
 choco_rect = pygame.Rect(WIDTH // 2 - 120, HEIGHT // 2 - 120, 240, 240)
 # les boutons de construction de builds sont générés en fonction du nombre de types de bâtiments définis dans la liste builds.
 build_buttons_rects = [pygame.Rect(50, 150 + i * 80, 300, 60) for i in range(len(builds))]
+# rects pour upgrades (droite)
+upgrade_buttons_rects = [pygame.Rect(WIDTH - 360, 50 + i * 80, 300, 60) for i in range(len(upgrades))]
 # boutons de sauvegarde et de chargement
 save_rect = pygame.Rect(WIDTH - 170, HEIGHT - 140, 120, 40)
 load_rect = pygame.Rect(WIDTH - 170, HEIGHT - 80, 120, 40)
@@ -153,6 +192,18 @@ while running:
                     if state["count"] >= cost:
                         state["count"] -= cost
                         build["owned"] += 1
+
+            # clic upgrades: seulement si non acheté
+            for i, upg in enumerate(upgrades):
+                if upg.get("bought"):
+                    continue
+                rect = upgrade_buttons_rects[i]
+                if rect.collidepoint(mx, my):
+                    cost = upgrade_cost(upg)
+                    if state["count"] >= cost:
+                        state["count"] -= cost
+                        upg["bought"] = True
+                        apply_upgrade(upg)
 
             # save et load boutons
             if save_rect.collidepoint(mx, my):
@@ -207,6 +258,17 @@ while running:
         screen.blit(owned, (rect.x + 10, rect.y + 30))
         screen.blit(cost_text, (rect.x + 120, rect.y + 5))
         screen.blit(boost_text, (rect.x + 120, rect.y + 30))
+
+    # dessine les upgrades (ne dessine que celles non achetées)
+    for i, upg in enumerate(upgrades):
+        if upg.get("bought"):
+            continue
+        rect = upgrade_buttons_rects[i]
+        pygame.draw.rect(screen, (220, 220, 200), rect, border_radius=8)
+        title = font_med.render(upg.get("name", ""), True, (10, 10, 10))
+        cost_text = font_small.render(f"Cost: {format_num(upgrade_cost(upg))}", True, (10, 10, 10))
+        screen.blit(title, (rect.x + 10, rect.y + 5))
+        screen.blit(cost_text, (rect.x + 10, rect.y + 30))
 
     # Save/load boutons
     pygame.draw.rect(screen, (180, 220, 180), save_rect, border_radius=6)
