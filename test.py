@@ -17,6 +17,10 @@ state = {
     "count": 0.0,
     "per_click": 1.0,
 }
+# --- Ajout stats ---
+show_stats = False
+start_time = pygame.time.get_ticks()
+clicks_total = 0
 
 # ---------- formate le nombre pour l'afficher d'une certaine manière (comme 1.2 K, 2 M) ----------
 def format_num(n):
@@ -58,6 +62,38 @@ def load_game():
 def build_cost(build):
     # le coût d'un build augmente de 15% à chaque achat par rapport au coût initial
     return round(build["cost"] * (1.15 ** build["owned"]))
+# Les staststiques
+def draw_stats(screen, font, state_dict, clicks_total, start_time):
+    screen.fill((30, 30, 30))  # fond sombre
+    elapsed = (pygame.time.get_ticks() - start_time) / 1000  # en secondes
+
+    # total CPS depuis les builds
+    total_cps = sum(b["owned"] * b["boost"] for b in state_dict["builds"])
+
+    stats_lines = [
+        f"=== STATISTIQUES ===",
+        f"Chocolatines actuelles : {state_dict['state']['count']:.1f}",
+        f"Chocolatines par clic : {state_dict['state']['per_click']:.1f}",
+        f"CPS total (auto) : {total_cps:.2f}",
+        f"Nombre de clics : {clicks_total}",
+        f"Temps de jeu : {elapsed:.1f} sec",
+        "",
+        "Détails des upgrades :"
+    ]
+
+    # affichage des builds
+    for b in state_dict["builds"]:
+        stats_lines.append(
+            f"{b['name']} : {b['owned']} (Boost {b['boost']}/u, total {b['owned']*b['boost']})"
+        )
+
+    stats_lines.append("")
+    stats_lines.append("Appuyez sur 2 pour revenir au jeu")
+
+    # rendu texte
+    for i, line in enumerate(stats_lines):
+        text = font.render(line, True, (220, 220, 220))
+        screen.blit(text, (50, 80 + i * 30))
 
 # ---------- pygame setup ----------
 pygame.init()
@@ -132,6 +168,14 @@ while running:
                 save_game()
             elif event.key == pygame.K_l:
                 load_game()
+            elif event.key == pygame.K_2:# ajout une touche pour les stats
+                show_stats = not show_stats
+        # --- Page STATISTIQUES ---
+    if show_stats:
+
+        draw_stats(screen, font_med, {"state": state, "builds": builds}, clicks_total, start_time)
+        pygame.display.flip()
+        continue
 
     # mettre à jour l'affichage du jeu
     screen.fill((250, 240, 230))  # background
@@ -171,7 +215,7 @@ while running:
     screen.blit(font_small.render("Charger (L)", True, (10, 10, 10)), (load_rect.x + 12, load_rect.y + 10))
 
     # affiche les instructions pour le joueur en bas de l'écran.
-    hint = font_small.render("Cliquez sur la chocolatine ou appuyez sur ESPACE. Sauvegarder avec S. Charger avec L.", True, (80, 70, 60))
+    hint = font_small.render("Cliquez sur la chocolatine ou appuyez sur ESPACE. Sauvegarder avec S. Charger avec L. Statstique avec 2", True, (80, 70, 60))
     screen.blit(hint, (50, HEIGHT - 40))
     # actualise l'affichage de la fenêtre du jeu pour refléter les changements apportés lors de cette itération de la boucle principale.
     pygame.display.flip()
