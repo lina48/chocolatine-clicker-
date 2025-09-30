@@ -1,13 +1,13 @@
 {
     "state": {
-        "count": 16.488399999999285,
-        "per_click": 1.2100000000000002
+        "count": 0,
+        "per_click": 1
     },
     "builds": [
         {
             "name": "Cursors",
             "description": "Cursors to tap for you.",
-            "owned": 6,
+            "owned": 0,
             "cost": 15,
             "known": false,
             "boost": 0.1,
@@ -46,15 +46,15 @@
             "name": "Plastic mouse",
             "description": "Tappin gains + 2% of your, CpS.",
             "cost": 100,
-            "type": "click",
+            "type": "cursor",
             "amount": 2,
-            "bought": true
+            "bought": false
         },
         {
             "name": "Iron mouse",
             "description": "Tappin gains + 4% of your CpS.",
             "cost": 500,
-            "type": "click",
+            "type": "cursor",
             "amount": 4,
             "bought": false
         },
@@ -62,7 +62,7 @@
             "name": "Titanium mouse",
             "description": "Tappin gains + 2% of your CpS.",
             "cost": 1000,
-            "type": "click",
+            "type": "cursor",
             "amount": 1.3,
             "bought": false
         },
@@ -70,7 +70,7 @@
             "name": "Adamantium mouse",
             "description": "Tappin gains + 2.1% of your CpS.",
             "cost": 5000,
-            "type": "click",
+            "type": "cursor",
             "amount": 1.4,
             "bought": false
         },
@@ -78,7 +78,7 @@
             "name": "Unobtainium mouse",
             "description": "Tappin gains + 2.5% of your CpS.",
             "cost": 50000,
-            "type": "click",
+            "type": "cursor",
             "amount": 2,
             "bought": false
         },
@@ -86,7 +86,7 @@
             "name": "Eludium mouse",
             "description": "Tappin gains + 3% of your CpS.",
             "cost": 100000,
-            "type": "click",
+            "type": "cursor",
             "amount": 2.2,
             "bought": false
         }

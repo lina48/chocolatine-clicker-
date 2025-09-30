@@ -83,22 +83,13 @@ def upgrade_cost(upg):
 
 def apply_upgrade(upg):
     """Applique l'effet d'un upgrade déjà acheté.
-    - si type == 'click' : multiplie le per_click
-    - sinon multiplie le boost des builds dont le type correspond
-    """
+    Double le boost des builds dont le type correspond à l'upgrade."""
     t = upg.get("type")
     if not t:
         return
-    # Les améliorations doivent augmenter le CPS, pas le per-click.
-    # Si type == 'click' on l'interprète comme une amélioration globale du CPS :
-    # on double le boost de TOUS les bâtiments pour augmenter le CPS total.
-    if t == "click":
-        for b in builds:
+    for b in builds:
+        if b.get("type") == t:
             b["boost"] *= 2
-    else:
-        for b in builds:
-            if b.get("type") == t:
-                b["boost"] *= 2
 # Les stastistiques
 def draw_stats(screen, font, state_dict, clicks_total, start_time):
     screen.fill((30, 30, 30))  # fond sombre
@@ -193,17 +184,15 @@ while running:
                         state["count"] -= cost
                         build["owned"] += 1
 
-            # clic upgrades: seulement si non acheté
-            for i, upg in enumerate(upgrades):
-                if upg.get("bought"):
-                    continue
-                rect = upgrade_buttons_rects[i]
+            # clic upgrades: seulement la première non achetée, au même endroit
+            if upgrade_to_show:
+                rect = upgrade_buttons_rects[0]  # Toujours au même endroit
                 if rect.collidepoint(mx, my):
-                    cost = upgrade_cost(upg)
+                    cost = upgrade_cost(upgrade_to_show)
                     if state["count"] >= cost:
                         state["count"] -= cost
-                        upg["bought"] = True
-                        apply_upgrade(upg)
+                        upgrade_to_show["bought"] = True
+                        apply_upgrade(upgrade_to_show)
 
             # save et load boutons
             if save_rect.collidepoint(mx, my):
@@ -259,14 +248,21 @@ while running:
         screen.blit(cost_text, (rect.x + 120, rect.y + 5))
         screen.blit(boost_text, (rect.x + 120, rect.y + 30))
 
-    # dessine les upgrades (ne dessine que celles non achetées)
+    # --- Affichage d'une seule upgrade au même endroit ---
+    # Cherche la première upgrade non achetée
+    upgrade_to_show = None
+    upgrade_index = None
     for i, upg in enumerate(upgrades):
-        if upg.get("bought"):
-            continue
-        rect = upgrade_buttons_rects[i]
+        if not upg.get("bought"):
+            upgrade_to_show = upg
+            upgrade_index = i
+            break
+
+    if upgrade_to_show:
+        rect = upgrade_buttons_rects[0]  # Toujours au même endroit (le premier bouton)
         pygame.draw.rect(screen, (220, 220, 200), rect, border_radius=8)
-        title = font_med.render(upg.get("name", ""), True, (10, 10, 10))
-        cost_text = font_small.render(f"Cost: {format_num(upgrade_cost(upg))}", True, (10, 10, 10))
+        title = font_med.render(upgrade_to_show.get("name", ""), True, (10, 10, 10))
+        cost_text = font_small.render(f"Cost: {format_num(upgrade_cost(upgrade_to_show))}", True, (10, 10, 10))
         screen.blit(title, (rect.x + 10, rect.y + 5))
         screen.blit(cost_text, (rect.x + 10, rect.y + 30))
 
