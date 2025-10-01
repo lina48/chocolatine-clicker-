@@ -127,9 +127,7 @@ def draw_stats(screen, font, state_dict, clicks_total, start_time):
 pygame.init()
 # Initialisation de Pygame
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-#je veux changer la couleur du background de la fenetre pour ressembler a la photo de la chocolatine
 background_color = (235, 205, 169)
-# Couleur de fond similaire à la chocolatine
 screen.fill(background_color)
 pygame.display.set_caption("Chocolatine Clicker ")
 # time clock pour gérer le framerate pour que le jeu ne tourne pas trop vite
@@ -141,7 +139,7 @@ font_small = pygame.font.SysFont(None, 20)
 
 # Boutons
 # zone cliquable pour la chocolatine sauvegarde et chargement
-choco_rect = pygame.Rect(WIDTH // 2 - 120, HEIGHT // 2 - 120, 240, 240)
+choco_rect = pygame.Rect(WIDTH // 2 - 150, HEIGHT // 2 - 200, 400, 400)
 # les boutons de construction de builds sont générés en fonction du nombre de types de bâtiments définis dans la liste builds.
 build_buttons_rects = [pygame.Rect(50, 150 + i * 80, 300, 60) for i in range(len(builds))]
 # rects pour upgrades (droite)
@@ -227,7 +225,7 @@ while running:
     screen.fill((250, 240, 230))  # background
 
     # Chocolatine
-    choco_image = pygame.image.load("assets/img/chocolatine.jpg")
+    choco_image = pygame.image.load("assets/img/chocolatine-removebg-preview.png")
     choco_image = pygame.transform.scale(choco_image, (choco_rect.width, choco_rect.height))  # Ajuster à la taille de choco_rect
     # Afficher l'image de la chocolatine
     screen.blit(choco_image, choco_rect)
