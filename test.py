@@ -127,6 +127,10 @@ def draw_stats(screen, font, state_dict, clicks_total, start_time):
 pygame.init()
 # Initialisation de Pygame
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
+#je veux changer la couleur du background de la fenetre pour ressembler a la photo de la chocolatine
+background_color = (235, 205, 169)
+# Couleur de fond similaire à la chocolatine
+screen.fill(background_color)
 pygame.display.set_caption("Chocolatine Clicker ")
 # time clock pour gérer le framerate pour que le jeu ne tourne pas trop vite
 clock = pygame.time.Clock()
@@ -148,7 +152,7 @@ load_rect = pygame.Rect(WIDTH - 170, HEIGHT - 80, 120, 40)
 
 # Load save
 load_game()
-
+upgrade_to_show = None
 # Timing
 last_time = pygame.time.get_ticks()
 running = True
@@ -199,6 +203,8 @@ while running:
                 save_game()
             if load_rect.collidepoint(mx, my):
                 load_game()
+        
+
 
         # gère les entrées clavier pour cliquer sur la chocolatine (espace), sauvegarder (S) et charger (L).
         elif event.type == pygame.KEYDOWN:
